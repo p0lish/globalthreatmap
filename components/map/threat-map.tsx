@@ -19,7 +19,6 @@ import { threatLevelColors } from "@/types";
 import { EventPopup } from "./event-popup";
 import { CountryNewsModal } from "./country-news-modal";
 import { SignInModal } from "@/components/auth/sign-in-modal";
-import { hasReachedLimit, incrementCountryClicks } from "@/lib/usage-limits";
 
 const APP_MODE = process.env.NEXT_PUBLIC_APP_MODE || "self-hosted";
 
@@ -41,9 +40,10 @@ const clusterLayer: LayerProps = {
       100,
       "#ef4444",
     ],
-    "circle-radius": ["step", ["get", "point_count"], 20, 10, 30, 30, 40, 100, 50],
+    "circle-radius": ["step", ["get", "point_count"], 12, 10, 16, 30, 20, 100, 24],
     "circle-stroke-width": 2,
     "circle-stroke-color": "#1e293b",
+    "circle-opacity": 0.85,
   },
 };
 
@@ -54,7 +54,7 @@ const clusterCountLayer: LayerProps = {
   layout: {
     "text-field": ["get", "point_count_abbreviated"],
     "text-font": ["DIN Pro Medium", "Arial Unicode MS Bold"],
-    "text-size": 14,
+    "text-size": 11,
   },
   paint: {
     "text-color": "#ffffff",
@@ -245,7 +245,7 @@ export function ThreatMap() {
     setHospitalsLoading,
   } = useMapStore();
   const { filteredEvents, selectedEvent, selectEvent } = useEventsStore();
-  const { isAuthenticated, initialized } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const [selectedEntityLocation, setSelectedEntityLocation] = useState<SelectedEntityLocation | null>(null);
   const [selectedHospital, setSelectedHospital] = useState<SelectedHospital | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -256,12 +256,6 @@ export function ThreatMap() {
 
   const requiresAuth = APP_MODE === "valyu";
 
-  const checkLimit = useCallback(() => {
-    if (!requiresAuth) return false;
-    if (!initialized) return false;
-    if (isAuthenticated) return false;
-    return hasReachedLimit();
-  }, [requiresAuth, isAuthenticated, initialized]);
 
   // Fetch Nipah hospitals on mount
   useEffect(() => {
@@ -454,13 +448,10 @@ export function ThreatMap() {
           // Get ISO 3166-1 alpha-2 country code from short_code property
           const countryCode = countryFeature.properties?.short_code?.toUpperCase() || null;
 
-          if (checkLimit()) {
+          // Always require sign-in for country clicks (answers about a place)
+          if (requiresAuth && !isAuthenticated) {
             setShowSignInModal(true);
             return;
-          }
-
-          if (requiresAuth && initialized && !isAuthenticated) {
-            incrementCountryClicks();
           }
 
           setSelectedCountry(countryName);
@@ -471,7 +462,7 @@ export function ThreatMap() {
         console.error("Error reverse geocoding:", error);
       }
     },
-    [filteredEvents, selectEvent, viewport.zoom, checkLimit, requiresAuth, isAuthenticated, initialized]
+    [filteredEvents, selectEvent, viewport.zoom, requiresAuth, isAuthenticated]
   );
 
   const handleMouseEnter = useCallback(() => {
@@ -572,12 +563,8 @@ export function ThreatMap() {
         clusterRadius={50}
       >
         {showHeatmap && <Layer {...heatmapLayer} />}
-        {showClusters && (
-          <>
-            <Layer {...clusterLayer} />
-            <Layer {...clusterCountLayer} />
-          </>
-        )}
+        {showClusters && <Layer {...clusterLayer} />}
+        {showClusters && <Layer {...clusterCountLayer} />}
         <Layer {...unclusteredPointLayer} />
       </Source>
 

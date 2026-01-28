@@ -7,11 +7,21 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const country = searchParams.get("country");
   const stream = searchParams.get("stream") === "true";
+  const accessToken = searchParams.get("accessToken");
 
   if (!country) {
     return NextResponse.json(
       { error: "Country parameter is required" },
       { status: 400 }
+    );
+  }
+
+  // In valyu mode, require user token
+  const selfHosted = isSelfHostedMode();
+  if (!selfHosted && !accessToken) {
+    return NextResponse.json(
+      { error: "Authentication required", requiresReauth: true },
+      { status: 401 }
     );
   }
 

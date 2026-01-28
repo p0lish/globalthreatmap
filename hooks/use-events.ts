@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEventsStore } from "@/stores/events-store";
 import { useAuthStore } from "@/stores/auth-store";
-import { hasReachedLimit, incrementEventLoads } from "@/lib/usage-limits";
 import type { ThreatEvent } from "@/types";
 
 const APP_MODE = process.env.NEXT_PUBLIC_APP_MODE || "self-hosted";
@@ -27,21 +26,21 @@ export function useEvents(options: UseEventsOptions = {}) {
     isLoading,
     error,
     setEvents,
-    addEvents,
     setLoading,
     setError,
   } = useEventsStore();
 
-  const { getAccessToken, signOut, isAuthenticated, initialized } = useAuthStore();
+  const { getAccessToken, isAuthenticated } = useAuthStore();
   const [requiresSignIn, setRequiresSignIn] = useState(false);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const initialFetchRef = useRef(false);
 
   const requiresAuth = APP_MODE === "valyu";
 
+  // Fetch events from API
   const fetchEvents = useCallback(async () => {
-    if (requiresAuth && initialized && !isAuthenticated && hasReachedLimit()) {
+    // In valyu mode, require sign-in for all event fetches
+    if (requiresAuth && !isAuthenticated) {
       setRequiresSignIn(true);
       setLoading(false);
       return;
@@ -59,58 +58,46 @@ export function useEvents(options: UseEventsOptions = {}) {
         body: JSON.stringify({ queries: queries || [], accessToken }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch events");
-      }
-
       const data = await response.json();
 
-      if (data.requiresReauth) {
-        signOut();
-        setError("Session expired. Please sign in again.");
+      // Handle auth errors - don't immediately sign out, just prompt re-auth
+      if (response.status === 401 || data.requiresReauth) {
+        setRequiresSignIn(true);
+        setError("Please wait 30 seconds and refresh.");
         return;
       }
 
-      const newEvents: ThreatEvent[] = data.events;
-
-      if (!initialFetchRef.current) {
-        setEvents(newEvents);
-        initialFetchRef.current = true;
-        if (requiresAuth && initialized && !isAuthenticated) {
-          incrementEventLoads();
-        }
-      } else {
-        const existingIds = new Set(events.map((e) => e.id));
-        const trulyNewEvents = newEvents.filter((e) => !existingIds.has(e.id));
-
-        if (trulyNewEvents.length > 0) {
-          addEvents(trulyNewEvents);
-        }
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch events");
       }
+
+      const newEvents: ThreatEvent[] = data.events || [];
+      setEvents(newEvents);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error occurred");
     } finally {
       setLoading(false);
     }
-  }, [queries, events, setEvents, addEvents, setLoading, setError, getAccessToken, signOut, requiresAuth, isAuthenticated, initialized]);
+  }, [queries, setEvents, setLoading, setError, getAccessToken, requiresAuth, isAuthenticated]);
 
+  // Manual refresh
   const refresh = useCallback(() => {
-    if (requiresAuth && initialized && !isAuthenticated && hasReachedLimit()) {
-      setRequiresSignIn(true);
-      return;
-    }
-    if (requiresAuth && initialized && !isAuthenticated) {
-      incrementEventLoads();
-    }
     fetchEvents();
-  }, [fetchEvents, requiresAuth, isAuthenticated, initialized]);
+  }, [fetchEvents]);
 
+  // Initial fetch on mount (or when auth changes)
   useEffect(() => {
-    if (!initialFetchRef.current) {
-      fetchEvents();
+    fetchEvents();
+  }, [fetchEvents]);
+
+  // Auto-refresh - only if authenticated
+  useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
 
-    if (autoRefresh && !(requiresAuth && initialized && !isAuthenticated && hasReachedLimit())) {
+    if (autoRefresh && isAuthenticated) {
       intervalRef.current = setInterval(fetchEvents, refreshInterval);
     }
 
@@ -119,7 +106,7 @@ export function useEvents(options: UseEventsOptions = {}) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [autoRefresh, refreshInterval, fetchEvents, requiresAuth, isAuthenticated, initialized]);
+  }, [autoRefresh, refreshInterval, isAuthenticated, fetchEvents]);
 
   useEffect(() => {
     if (isAuthenticated) {

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 const TOKEN_STORAGE_KEY = "valyu_oauth_tokens";
 const USER_STORAGE_KEY = "valyu_user";
@@ -73,94 +74,137 @@ function clearUser(): void {
   localStorage.removeItem(USER_STORAGE_KEY);
 }
 
-export const useAuthStore = create<AuthState>()((set, get) => ({
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  tokenExpiresAt: null,
-  isAuthenticated: false,
-  isLoading: true,
-  initialized: false,
+// Check if token is expired (with 30s buffer)
+function isTokenExpired(expiresAt: number): boolean {
+  return Date.now() >= expiresAt - 30000;
+}
 
-  initialize: () => {
-    if (get().initialized) return;
-    set({ initialized: true });
+// Load initial tokens from localStorage
+function loadInitialTokens(): { user: User | null; tokens: TokenData | null } {
+  if (typeof window === "undefined") {
+    return { user: null, tokens: null };
+  }
+  const user = loadUser();
+  const tokens = loadTokens();
+  if (user && tokens && !isTokenExpired(tokens.expiresAt)) {
+    return { user, tokens };
+  }
+  return { user: null, tokens: null };
+}
 
-    const user = loadUser();
-    const tokens = loadTokens();
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      accessToken: null,
+      refreshToken: null,
+      tokenExpiresAt: null,
+      isAuthenticated: false,
+      isLoading: true,
+      initialized: false,
 
-    if (user && tokens) {
-      const now = Date.now();
-      if (tokens.expiresAt > now) {
+      initialize: () => {
+        if (get().initialized) return;
+        set({ initialized: true });
+
+        // Load tokens from localStorage first
+        const { user, tokens } = loadInitialTokens();
+        if (user && tokens) {
+          set({
+            user,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken || null,
+            tokenExpiresAt: tokens.expiresAt,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return;
+        }
+
+        // Failsafe timeout - if nothing happens in 2 seconds, stop loading
+        const timeoutId = setTimeout(() => {
+          if (get().isLoading) {
+            set({ isLoading: false });
+          }
+        }, 2000);
+
+        // No valid tokens found
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          tokenExpiresAt: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+
+        clearTimeout(timeoutId);
+      },
+
+      signIn: (user, tokens) => {
+        // Default to 7 days if no expiresIn provided
+        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+        const expiresAt = tokens.expiresIn
+          ? Date.now() + tokens.expiresIn * 1000
+          : Date.now() + SEVEN_DAYS_MS;
+
+        // Save to localStorage
+        saveUser(user);
+        saveTokens({
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresAt,
+        });
+
+        // Update state
         set({
           user,
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken || null,
-          tokenExpiresAt: tokens.expiresAt,
+          tokenExpiresAt: expiresAt,
           isAuthenticated: true,
           isLoading: false,
         });
-        return;
-      } else {
-        clearTokens();
+      },
+
+      signOut: () => {
         clearUser();
-      }
+        clearTokens();
+
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          tokenExpiresAt: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      },
+
+      getAccessToken: () => {
+        const state = get();
+        if (!state.accessToken) return null;
+
+        if (state.tokenExpiresAt && isTokenExpired(state.tokenExpiresAt)) {
+          return null;
+        }
+
+        return state.accessToken;
+      },
+    }),
+    {
+      name: "auth-storage",
+      storage: createJSONStorage(() => sessionStorage),
+      // Persist user data and tokens for hydration
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        tokenExpiresAt: state.tokenExpiresAt,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      // Skip automatic hydration - we do it manually in initialize()
+      skipHydration: true,
     }
-
-    set({
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      tokenExpiresAt: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
-  },
-
-  signIn: (user, tokens) => {
-    const expiresAt = tokens.expiresIn
-      ? Date.now() + tokens.expiresIn * 1000
-      : Date.now() + 3600 * 1000;
-
-    saveUser(user);
-    saveTokens({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt,
-    });
-
-    set({
-      user,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken || null,
-      tokenExpiresAt: expiresAt,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-  },
-
-  signOut: () => {
-    clearUser();
-    clearTokens();
-
-    set({
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      tokenExpiresAt: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
-  },
-
-  getAccessToken: () => {
-    const state = get();
-    if (!state.accessToken) return null;
-
-    if (state.tokenExpiresAt && Date.now() >= state.tokenExpiresAt - 30000) {
-      return null;
-    }
-
-    return state.accessToken;
-  },
-}));
+  )
+);

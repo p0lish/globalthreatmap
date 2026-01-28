@@ -28,7 +28,13 @@ const EventClassificationSchema = z.object({
   primaryLocation: z.string().describe(
     "The main geographic location (city, region, or country) where the Nipah virus event is occurring. Use proper names."
   ),
-  country: z.string().optional().describe(
+  city: z.string().nullable().describe(
+    "The city or town name if identifiable, null otherwise"
+  ),
+  region: z.string().nullable().describe(
+    "The state, province, or region if identifiable, null otherwise"
+  ),
+  country: z.string().nullable().describe(
     "The country where the event is occurring, if identifiable"
   ),
 });
@@ -67,7 +73,6 @@ async function classifyWithAI(
 2. Threat Level - severity based on outbreak scale and mortality risk
 3. Location - the primary geographic location where this event is happening
 
-Be precise with locations - use actual place names (cities, countries, regions).
 For threat level:
 - critical: major outbreak with high mortality, rapid spread, multiple deaths
 - high: confirmed Nipah cases with active transmission, deaths reported
@@ -111,16 +116,30 @@ export async function classifyEvent(
   const aiResult = await classifyWithAI(title, content);
 
   if (aiResult) {
-    // AI classification succeeded - geocode the location
+    // AI classification succeeded - geocode the location with cascading specificity
     let location: GeoLocation | null = null;
 
-    if (aiResult.primaryLocation) {
-      location = await geocodeLocation(aiResult.primaryLocation);
+    // Try most specific first: city + region + country
+    if (aiResult.city && aiResult.country) {
+      const cityQuery = aiResult.region
+        ? `${aiResult.city}, ${aiResult.region}, ${aiResult.country}`
+        : `${aiResult.city}, ${aiResult.country}`;
+      location = await geocodeLocation(cityQuery);
+    }
 
-      // If AI's location couldn't be geocoded, try with country
-      if (!location && aiResult.country) {
-        location = await geocodeLocation(aiResult.country);
-      }
+    // Try the primary location string (should be most specific)
+    if (!location && aiResult.primaryLocation) {
+      location = await geocodeLocation(aiResult.primaryLocation);
+    }
+
+    // Try region + country
+    if (!location && aiResult.region && aiResult.country) {
+      location = await geocodeLocation(`${aiResult.region}, ${aiResult.country}`);
+    }
+
+    // Last resort: just country
+    if (!location && aiResult.country) {
+      location = await geocodeLocation(aiResult.country);
     }
 
     return {

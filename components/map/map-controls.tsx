@@ -2,7 +2,7 @@
 
 import { useMapStore } from "@/stores/map-store";
 import { Button } from "@/components/ui/button";
-import { Layers, Flame, Circle, Square } from "lucide-react";
+import { Flame, Circle, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function MapControls() {
