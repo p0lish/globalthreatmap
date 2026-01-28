@@ -9,21 +9,13 @@ import type { ThreatEvent } from "@/types";
 export const dynamic = "force-dynamic";
 
 const THREAT_QUERIES = [
-  "breaking news conflict military",
-  "geopolitical crisis tensions",
-  "protest demonstration unrest",
-  "natural disaster emergency",
-  "earthquake tsunami volcano eruption",
-  "hurricane typhoon cyclone storm",
-  "flooding wildfire drought extreme weather",
-  "terrorism attack security",
-  "cyber attack breach",
-  "diplomatic summit sanctions",
-  "shipping attack piracy maritime",
-  "kidnapping cartel violence crime",
-  "infrastructure dam power grid failure",
-  "food shortage commodity crisis",
-  "missile strike airstrike bombing",
+  "Nipah virus outbreak",
+  "Nipah virus cases",
+  "Nipah virus news",
+  "Nipah virus deaths",
+  "Nipah henipavirus",
+  "Nipah virus Kerala",
+  "Nipah virus Bangladesh",
 ];
 
 // Clean boilerplate from content

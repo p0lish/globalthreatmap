@@ -4,20 +4,11 @@ export const ThreatLevel = z.enum(["critical", "high", "medium", "low", "info"])
 export type ThreatLevel = z.infer<typeof ThreatLevel>;
 
 export const EventCategory = z.enum([
-  "conflict",
-  "protest",
-  "disaster",
-  "diplomatic",
-  "economic",
-  "terrorism",
-  "cyber",
-  "health",
-  "environmental",
-  "military",
-  "crime",
-  "piracy",
-  "infrastructure",
-  "commodities",
+  "outbreak",
+  "case",
+  "news",
+  "research",
+  "prevention",
 ]);
 export type EventCategory = z.infer<typeof EventCategory>;
 
@@ -88,18 +79,9 @@ export const threatLevelColors: Record<ThreatLevel, string> = {
 };
 
 export const categoryIcons: Record<EventCategory, string> = {
-  conflict: "Swords",
-  protest: "Users",
-  disaster: "CloudLightning",
-  diplomatic: "Landmark",
-  economic: "TrendingDown",
-  terrorism: "AlertTriangle",
-  cyber: "Shield",
-  health: "Heart",
-  environmental: "Leaf",
-  military: "Target",
-  crime: "Skull",
-  piracy: "Anchor",
-  infrastructure: "Droplets",
-  commodities: "ShoppingCart",
+  outbreak: "AlertTriangle",
+  case: "Activity",
+  news: "Newspaper",
+  research: "BookOpen",
+  prevention: "Shield",
 };

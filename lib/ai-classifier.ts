@@ -13,29 +13,20 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-nano";
 
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
-// Zod schema for structured event classification
+// Zod schema for Nipah virus event classification
 const EventClassificationSchema = z.object({
   category: z.enum([
-    "conflict",
-    "protest",
-    "disaster",
-    "diplomatic",
-    "economic",
-    "terrorism",
-    "cyber",
-    "health",
-    "environmental",
-    "military",
-    "crime",
-    "piracy",
-    "infrastructure",
-    "commodities",
-  ]).describe("The primary category of the event"),
+    "outbreak",
+    "case",
+    "news",
+    "research",
+    "prevention",
+  ]).describe("The type of Nipah virus event: outbreak (active outbreak), case (individual/cluster cases), news (general Nipah virus news), research (studies/findings), prevention (health measures/vaccination)"),
   threatLevel: z.enum(["critical", "high", "medium", "low", "info"]).describe(
-    "Severity level: critical (imminent danger, mass casualties), high (significant threat), medium (developing situation), low (minor/contained), info (routine update)"
+    "Severity level: critical (major outbreak, high mortality), high (confirmed cases spreading), medium (isolated cases, monitoring), low (contained/resolved), info (research updates, prevention info)"
   ),
   primaryLocation: z.string().describe(
-    "The MOST SPECIFIC geographic location possible. Prioritize: exact address/landmark > neighborhood/district > city > region > country. Examples: 'Kharkiv, Ukraine' not 'Ukraine', 'Gaza City' not 'Gaza Strip', 'Port of Hodeidah, Yemen' not 'Yemen'."
+    "The main geographic location (city, region, or country) where the Nipah virus event is occurring. Use proper names."
   ),
   city: z.string().nullable().describe(
     "The city or town name if identifiable, null otherwise"
@@ -57,7 +48,7 @@ export interface ClassificationResult {
 }
 
 /**
- * Classify an event using OpenAI structured outputs
+ * Classify a Nipah virus event using OpenAI structured outputs
  * Extracts category, threat level, and location in a single API call
  */
 async function classifyWithAI(
@@ -72,41 +63,22 @@ async function classifyWithAI(
       messages: [
         {
           role: "system",
-          content: `You are an intelligence analyst classifying global events. Analyze the headline and content to determine:
-1. Category - the type of event
-2. Threat Level - severity based on potential impact and urgency
-3. Location - the primary geographic location where this is happening
-
-Categories:
-- conflict: armed conflicts, wars, military clashes
-- protest: demonstrations, civil unrest, riots
-- disaster: natural disasters, earthquakes, floods, hurricanes, wildfires
-- diplomatic: international relations, treaties, sanctions
-- economic: financial markets, trade, economic crises
-- terrorism: terror attacks, bombings, extremist violence
-- cyber: cyberattacks, data breaches, hacking
-- health: disease outbreaks, pandemics, public health emergencies
-- environmental: climate events, pollution, environmental damage
-- military: military exercises, deployments, defense activities
-- crime: murders, kidnappings, drug trafficking, shootings, organized crime
-- piracy: maritime piracy, shipping attacks, hijacking at sea
-- infrastructure: water reservoir levels, power grid, utilities, dams
-- commodities: grocery prices, food supply, commodity shortages
-
-LOCATION EXTRACTION IS CRITICAL - be as granular as possible:
-- Always extract the most specific location mentioned (city > region > country)
-- Include the city name even for well-known locations (e.g., "Mariupol, Ukraine" not just "Ukraine")
-- For military/naval events, specify the base, port, or installation name
-- For maritime events, include coordinates or nearby port/coast if mentioned
-- Never use vague terms like "Middle East" or "Europe" when a specific country/city is mentioned
-- Examples of good locations: "Kramatorsk, Donetsk Oblast, Ukraine", "Bab el-Mandeb Strait", "Port of Aden, Yemen"
+          content: `You are a health intelligence analyst specializing in Nipah virus tracking. Analyze the headline and content to determine:
+1. Category - the type of Nipah virus event:
+   - outbreak: active Nipah virus outbreaks affecting multiple people
+   - case: individual or cluster case reports of Nipah virus
+   - news: general news coverage about Nipah virus
+   - research: scientific studies, findings, or research on Nipah virus
+   - prevention: prevention measures, vaccination efforts, health advisories
+2. Threat Level - severity based on outbreak scale and mortality risk
+3. Location - the primary geographic location where this event is happening
 
 For threat level:
-- critical: imminent danger, mass casualties, nuclear/WMD threats
-- high: significant active threats, major incidents, escalating situations
-- medium: developing situations, moderate concern, ongoing tensions
-- low: minor incidents, contained events, localized issues
-- info: routine updates, announcements, analysis pieces`,
+- critical: major outbreak with high mortality, rapid spread, multiple deaths
+- high: confirmed Nipah cases with active transmission, deaths reported
+- medium: isolated cases under monitoring, limited transmission
+- low: contained or resolved cases, no active spread
+- info: research updates, prevention information, historical context`,
         },
         {
           role: "user",
@@ -131,7 +103,7 @@ For threat level:
 }
 
 /**
- * Classify an event - uses AI if available, falls back to keyword matching
+ * Classify a Nipah virus event - uses AI if available, falls back to keyword matching
  * Returns category, threat level, and geocoded location
  */
 export async function classifyEvent(
