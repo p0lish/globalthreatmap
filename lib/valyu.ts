@@ -533,14 +533,6 @@ export async function getNipahHospitals(): Promise<NipahHospital[]> {
   // Fallback data with known Nipah outbreak hospitals
   if (hospitals.length < 3) {
     return [
-      { country: "India", city: "Kozhikode", hospitalName: "Government Medical College Kozhikode", latitude: 11.2588, longitude: 75.7804, status: "monitoring", caseCount: 15, lastReported: "2023" },
-      { country: "India", city: "Ernakulam", hospitalName: "Ernakulam Medical Centre", latitude: 9.9816, longitude: 76.2999, status: "contained", caseCount: 3, lastReported: "2021" },
-      { country: "Bangladesh", city: "Dhaka", hospitalName: "Dhaka Medical College Hospital", latitude: 23.7261, longitude: 90.3967, status: "monitoring", caseCount: 8, lastReported: "2023" },
-      { country: "Bangladesh", city: "Faridpur", hospitalName: "Faridpur Medical College", latitude: 23.6070, longitude: 89.8429, status: "contained", caseCount: 4, lastReported: "2022" },
-      { country: "India", city: "Malappuram", hospitalName: "District Hospital Malappuram", latitude: 11.0510, longitude: 76.0711, status: "monitoring", caseCount: 2, lastReported: "2023" },
-      { country: "Bangladesh", city: "Rajbari", hospitalName: "Rajbari District Hospital", latitude: 23.7574, longitude: 89.6444, status: "contained", caseCount: 5, lastReported: "2021" },
-      { country: "India", city: "Kannur", hospitalName: "Government General Hospital Kannur", latitude: 11.8745, longitude: 75.3704, status: "monitoring", caseCount: 1, lastReported: "2022" },
-      { country: "Bangladesh", city: "Naogaon", hospitalName: "Naogaon Sadar Hospital", latitude: 24.7936, longitude: 88.9318, status: "contained", caseCount: 3, lastReported: "2020" },
     ];
   }
 
@@ -605,9 +597,9 @@ export async function* streamCountryNipahCases(
   country: string,
   options?: EntityOptions
 ): AsyncGenerator<NipahCaseStreamChunk> {
-  const currentQuery = `List all current or recent Nipah virus cases, outbreaks, and monitoring activities in ${country} as of 2024-2026. Include active cases, hospitals treating patients, containment measures, and surveillance programs. If there are no current cases, state that clearly.`;
+  const currentQuery = `List all current or recent Nipah virus cases, outbreaks, and monitoring activities only from ${country} from the past months. Include active cases, hospitals treating patients, containment measures, and surveillance programs. If there are no current cases, state that clearly.`;
 
-  const pastQuery = `List all historical Nipah virus outbreaks and cases in ${country} from 1998 to 2023. Include the year, location, number of cases, deaths, and hospitals involved. Focus on past outbreaks that have been resolved.`;
+  const pastQuery = `List all historical Nipah virus outbreaks and cases only from ${country} between 2000 and 2023. Include the year, location, number of cases, deaths, and hospitals involved. Focus on past outbreaks that have been resolved.`;
 
   // Use OAuth proxy if accessToken is provided (non-streaming)
   if (options?.accessToken) {
