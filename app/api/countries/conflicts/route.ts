@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCountryNipahCases, streamCountryNipahCases } from "@/lib/valyu";
+import { isSelfHostedMode } from "@/lib/app-mode";
 
 export const dynamic = "force-dynamic";
 

@@ -8,7 +8,7 @@ import { ThreatMap } from "@/components/map/threat-map";
 import { TimelineScrubber } from "@/components/map/timeline-scrubber";
 import { MapControls } from "@/components/map/map-controls";
 import { WelcomeModal } from "@/components/welcome-modal";
-import { SignInPanel, SignInModal } from "@/components/auth";
+import { SignInPanel } from "@/components/auth";
 
 const WELCOME_DISMISSED_KEY = "globalthreatmap_welcome_dismissed";
 
@@ -43,7 +43,6 @@ export default function Home() {
       </div>
       <WelcomeModal open={showWelcome} onOpenChange={setShowWelcome} />
       <SignInPanel />
-      <SignInModal open={showSignInModal} onOpenChange={setShowSignInModal} />
     </div>
   );
 }

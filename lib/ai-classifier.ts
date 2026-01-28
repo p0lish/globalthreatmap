@@ -1,12 +1,13 @@
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { z } from "zod";
+import { config, z } from "zod";
 import type { EventCategory, ThreatLevel, GeoLocation } from "@/types";
 import { geocodeLocation, extractLocationsFromText } from "./geocoding";
 import {
   classifyCategory as keywordClassifyCategory,
   classifyThreatLevel as keywordClassifyThreatLevel,
 } from "./event-classifier";
+import Config from "@/config/system_setup";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-nano";
@@ -15,28 +16,13 @@ const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 // Zod schema for Nipah virus event classification
 const EventClassificationSchema = z.object({
-  category: z.enum([
-    "outbreak",
-    "case",
-    "news",
-    "research",
-    "prevention",
-  ]).describe("The type of Nipah virus event: outbreak (active outbreak), case (individual/cluster cases), news (general Nipah virus news), research (studies/findings), prevention (health measures/vaccination)"),
-  threatLevel: z.enum(["critical", "high", "medium", "low", "info"]).describe(
-    "Severity level: critical (major outbreak, high mortality), high (confirmed cases spreading), medium (isolated cases, monitoring), low (contained/resolved), info (research updates, prevention info)"
-  ),
-  primaryLocation: z.string().describe(
-    "The main geographic location (city, region, or country) where the Nipah virus event is occurring. Use proper names."
-  ),
-  city: z.string().nullable().describe(
-    "The city or town name if identifiable, null otherwise"
-  ),
-  region: z.string().nullable().describe(
-    "The state, province, or region if identifiable, null otherwise"
-  ),
-  country: z.string().nullable().describe(
-    "The country where the event is occurring, if identifiable"
-  ),
+  category: z.enum(Config.diseasse.category)
+    .describe(Config.diseasse.description),
+  threatLevel: z.enum(Config.diseasse.threatLevels).describe(Config.diseasse.threatDescription),
+  primaryLocation: z.string().describe(Config.diseasse.primaryLocation),
+  city: z.string().nullable().describe(Config.diseasse.city),
+  region: z.string().nullable().describe(Config.diseasse.region),
+  country: z.string().nullable().describe(Config.diseasse.country),
 });
 
 type EventClassification = z.infer<typeof EventClassificationSchema>;
@@ -61,25 +47,7 @@ async function classifyWithAI(
     const completion = await openai.chat.completions.parse({
       model: OPENAI_MODEL,
       messages: [
-        {
-          role: "system",
-          content: `You are a health intelligence analyst specializing in Nipah virus tracking. Analyze the headline and content to determine:
-1. Category - the type of Nipah virus event:
-   - outbreak: active Nipah virus outbreaks affecting multiple people
-   - case: individual or cluster case reports of Nipah virus
-   - news: general news coverage about Nipah virus
-   - research: scientific studies, findings, or research on Nipah virus
-   - prevention: prevention measures, vaccination efforts, health advisories
-2. Threat Level - severity based on outbreak scale and mortality risk
-3. Location - the primary geographic location where this event is happening
-
-For threat level:
-- critical: major outbreak with high mortality, rapid spread, multiple deaths
-- high: confirmed Nipah cases with active transmission, deaths reported
-- medium: isolated cases under monitoring, limited transmission
-- low: contained or resolved cases, no active spread
-- info: research updates, prevention information, historical context`,
-        },
+        ...Config.diseasse.agents,
         {
           role: "user",
           content: `Headline: ${title}\n\nContent: ${content.slice(0, 1000)}`,
