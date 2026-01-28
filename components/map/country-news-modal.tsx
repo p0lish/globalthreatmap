@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Markdown } from "@/components/ui/markdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Swords,
+  Biohazard,
   ExternalLink,
   History,
   AlertTriangle,
@@ -21,21 +21,21 @@ import {
 import { Favicon } from "@/components/ui/favicon";
 import { cn } from "@/lib/utils";
 
-interface CountryConflictsModalProps {
+interface CountryNewsModalProps {
   country: string | null;
   onClose: () => void;
   onLoadingChange?: (isLoading: boolean) => void;
 }
 
-interface ConflictSection {
+interface NewsSection {
   conflicts: string;
   sources: { title: string; url: string }[];
 }
 
-interface ConflictData {
+interface NewsData {
   country: string;
-  past: ConflictSection;
-  current: ConflictSection;
+  past: NewsSection;
+  current: NewsSection;
 }
 
 type TabType = "current" | "past";
@@ -46,7 +46,7 @@ function AnswerSkeleton() {
       <div className="mb-4 flex items-center gap-2">
         <RotateCw className="h-4 w-4 animate-spin text-muted-foreground" />
         <span className="text-sm text-muted-foreground">
-          Researching conflicts - typically under 15 seconds
+          Researching news - typically under 15 seconds
         </span>
       </div>
       <div className="space-y-3">
@@ -90,12 +90,12 @@ function SourcesSkeleton() {
   );
 }
 
-export function CountryConflictsModal({
+export function CountryNewsModal({
   country,
   onClose,
   onLoadingChange,
-}: CountryConflictsModalProps) {
-  const [data, setData] = useState<ConflictData | null>(null);
+}: CountryNewsModalProps) {
+  const [data, setData] = useState<NewsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isStreamingCurrent, setIsStreamingCurrent] = useState(false);
   const [isStreamingPast, setIsStreamingPast] = useState(false);
@@ -144,12 +144,12 @@ export function CountryConflictsModal({
             setData((prev) =>
               prev
                 ? {
-                    ...prev,
-                    current: {
-                      ...prev.current,
-                      conflicts: prev.current.conflicts + (chunk.content || ""),
-                    },
-                  }
+                  ...prev,
+                  current: {
+                    ...prev.current,
+                    conflicts: prev.current.conflicts + (chunk.content || ""),
+                  },
+                }
                 : null
             );
             break;
@@ -158,12 +158,12 @@ export function CountryConflictsModal({
             setData((prev) =>
               prev
                 ? {
-                    ...prev,
-                    current: {
-                      ...prev.current,
-                      sources: chunk.sources || [],
-                    },
-                  }
+                  ...prev,
+                  current: {
+                    ...prev.current,
+                    sources: chunk.sources || [],
+                  },
+                }
                 : null
             );
             setIsStreamingCurrent(false);
@@ -174,12 +174,12 @@ export function CountryConflictsModal({
             setData((prev) =>
               prev
                 ? {
-                    ...prev,
-                    past: {
-                      ...prev.past,
-                      conflicts: prev.past.conflicts + (chunk.content || ""),
-                    },
-                  }
+                  ...prev,
+                  past: {
+                    ...prev.past,
+                    conflicts: prev.past.conflicts + (chunk.content || ""),
+                  },
+                }
                 : null
             );
             break;
@@ -188,12 +188,12 @@ export function CountryConflictsModal({
             setData((prev) =>
               prev
                 ? {
-                    ...prev,
-                    past: {
-                      ...prev.past,
-                      sources: chunk.sources || [],
-                    },
-                  }
+                  ...prev,
+                  past: {
+                    ...prev.past,
+                    sources: chunk.sources || [],
+                  },
+                }
                 : null
             );
             break;
@@ -248,12 +248,12 @@ export function CountryConflictsModal({
       <DialogHeader onClose={onClose}>
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20">
-            <Swords className="h-5 w-5 text-red-400" />
+            <Biohazard className="h-5 w-5 text-red-400" />
           </div>
           <div>
             <DialogTitle>{country}</DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Wars & Conflicts History
+              Nipah virus related news and sources
             </p>
           </div>
         </div>
@@ -310,7 +310,7 @@ export function CountryConflictsModal({
                   <AnswerSkeleton />
                 ) : data[activeTab].conflicts ? (
                   <div className="rounded-lg border border-border bg-card p-4">
-                    <div className="mb-4 flex items-center gap-2">  
+                    <div className="mb-4 flex items-center gap-2">
                       {isStreaming && (
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                           {/* <RotateCw className="h-3 w-3 animate-spin" />
@@ -373,7 +373,7 @@ export function CountryConflictsModal({
 
         {!isLoading && !error && !data && (
           <div className="py-12 text-center">
-            <Swords className="mx-auto h-12 w-12 text-muted-foreground/50" />
+            <Biohazard className="mx-auto h-12 w-12 text-muted-foreground/50" />
             <p className="mt-4 text-sm text-muted-foreground">
               Click on a country to view its conflict history
             </p>
