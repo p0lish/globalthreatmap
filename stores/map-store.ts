@@ -5,12 +5,15 @@ interface EntityLocationMarker extends GeoLocation {
   entityName: string;
 }
 
-export interface MilitaryBaseMarker {
+export interface NipahHospitalMarker {
   country: string;
-  baseName: string;
+  hospitalName: string;
+  city: string;
   latitude: number;
   longitude: number;
-  type: "usa" | "nato";
+  caseCount?: number;
+  lastReported?: string;
+  status: "active" | "contained" | "monitoring";
 }
 
 interface MapState {
@@ -18,20 +21,20 @@ interface MapState {
   showHeatmap: boolean;
   showClusters: boolean;
   showWatchboxes: boolean;
-  showMilitaryBases: boolean;
+  showHospitals: boolean;
   isDrawingWatchbox: boolean;
   activeWatchboxId: string | null;
   isAutoPlaying: boolean;
   entityLocations: EntityLocationMarker[];
-  militaryBases: MilitaryBaseMarker[];
-  militaryBasesLoading: boolean;
+  hospitals: NipahHospitalMarker[];
+  hospitalsLoading: boolean;
 
   setViewport: (viewport: Partial<MapViewport>) => void;
   flyTo: (longitude: number, latitude: number, zoom?: number) => void;
   toggleHeatmap: () => void;
   toggleClusters: () => void;
   toggleWatchboxes: () => void;
-  toggleMilitaryBases: () => void;
+  toggleHospitals: () => void;
   startDrawingWatchbox: () => void;
   stopDrawingWatchbox: () => void;
   setActiveWatchbox: (id: string | null) => void;
@@ -39,8 +42,8 @@ interface MapState {
   stopAutoPlay: () => void;
   setEntityLocations: (entityName: string, locations: GeoLocation[]) => void;
   clearEntityLocations: () => void;
-  setMilitaryBases: (bases: MilitaryBaseMarker[]) => void;
-  setMilitaryBasesLoading: (loading: boolean) => void;
+  setHospitals: (hospitals: NipahHospitalMarker[]) => void;
+  setHospitalsLoading: (loading: boolean) => void;
 }
 
 const DEFAULT_VIEWPORT: MapViewport = {
@@ -56,13 +59,13 @@ export const useMapStore = create<MapState>((set) => ({
   showHeatmap: false,
   showClusters: true,
   showWatchboxes: true,
-  showMilitaryBases: true,
+  showHospitals: true,
   isDrawingWatchbox: false,
   activeWatchboxId: null,
   isAutoPlaying: false,
   entityLocations: [],
-  militaryBases: [],
-  militaryBasesLoading: false,
+  hospitals: [],
+  hospitalsLoading: false,
 
   setViewport: (viewport) =>
     set((state) => ({
@@ -94,9 +97,9 @@ export const useMapStore = create<MapState>((set) => ({
       showWatchboxes: !state.showWatchboxes,
     })),
 
-  toggleMilitaryBases: () =>
+  toggleHospitals: () =>
     set((state) => ({
-      showMilitaryBases: !state.showMilitaryBases,
+      showHospitals: !state.showHospitals,
     })),
 
   startDrawingWatchbox: () => set({ isDrawingWatchbox: true }),
@@ -119,7 +122,7 @@ export const useMapStore = create<MapState>((set) => ({
 
   clearEntityLocations: () => set({ entityLocations: [] }),
 
-  setMilitaryBases: (bases) => set({ militaryBases: bases }),
+  setHospitals: (hospitals) => set({ hospitals }),
 
-  setMilitaryBasesLoading: (loading) => set({ militaryBasesLoading: loading }),
+  setHospitalsLoading: (loading) => set({ hospitalsLoading: loading }),
 }));

@@ -442,20 +442,23 @@ export async function deepResearch(
   }
 }
 
-interface ConflictResult {
-  answer: string;
+interface HospitalCaseInfo {
+  summary: string;
   sources: { title: string; url: string }[];
 }
 
-export interface MilitaryBase {
+export interface NipahHospital {
   country: string;
-  baseName: string;
+  hospitalName: string;
+  city: string;
   latitude: number;
   longitude: number;
-  type: "usa" | "nato";
+  caseCount?: number;
+  lastReported?: string;
+  status: "active" | "contained" | "monitoring";
 }
 
-export async function getMilitaryBases(): Promise<MilitaryBase[]> {
+export async function getNipahHospitals(): Promise<NipahHospital[]> {
   const valyu = getValyuClient();
 
   type AnswerResponse = {
@@ -464,7 +467,7 @@ export async function getMilitaryBases(): Promise<MilitaryBase[]> {
   };
 
   const response = await valyu.answer(
-    `List all countries that currently host US military bases or NATO military installations. For each country, provide the name of the main/largest base and whether it's a US base or NATO base. Format each entry as: Country | Base Name | Type (US or NATO)`,
+    `List all hospitals and medical facilities that have reported Nipah virus cases in recent years (2018-2026). For each facility, provide the country, city, hospital name, and current status (active cases, contained, or under monitoring). Format each entry as: Country | City | Hospital Name | Status`,
     {
       excludedSources: ["wikipedia.org"],
     }
@@ -473,123 +476,81 @@ export async function getMilitaryBases(): Promise<MilitaryBase[]> {
   const answerData = response as AnswerResponse;
   const content = answerData.contents || "";
 
-  const bases: MilitaryBase[] = [];
+  const hospitals: NipahHospital[] = [];
   const lines = content.split("\n");
 
-  const countryCoordinates: Record<string, { lat: number; lng: number }> = {
-    "Germany": { lat: 50.1109, lng: 8.6821 },
-    "Japan": { lat: 35.6762, lng: 139.6503 },
-    "South Korea": { lat: 37.5665, lng: 126.9780 },
-    "Italy": { lat: 41.9028, lng: 12.4964 },
-    "United Kingdom": { lat: 51.5074, lng: -0.1278 },
-    "Turkey": { lat: 39.9334, lng: 32.8597 },
-    "Spain": { lat: 40.4168, lng: -3.7038 },
-    "Poland": { lat: 52.2297, lng: 21.0122 },
-    "Romania": { lat: 44.4268, lng: 26.1025 },
-    "Bulgaria": { lat: 42.6977, lng: 23.3219 },
-    "Greece": { lat: 37.9838, lng: 23.7275 },
-    "Belgium": { lat: 50.8503, lng: 4.3517 },
-    "Netherlands": { lat: 52.3676, lng: 4.9041 },
-    "Portugal": { lat: 38.7223, lng: -9.1393 },
-    "Norway": { lat: 59.9139, lng: 10.7522 },
-    "Denmark": { lat: 55.6761, lng: 12.5683 },
-    "Estonia": { lat: 59.4370, lng: 24.7536 },
-    "Latvia": { lat: 56.9496, lng: 24.1052 },
-    "Lithuania": { lat: 54.6872, lng: 25.2797 },
-    "Czech Republic": { lat: 50.0755, lng: 14.4378 },
-    "Hungary": { lat: 47.4979, lng: 19.0402 },
-    "Slovakia": { lat: 48.1486, lng: 17.1077 },
-    "Slovenia": { lat: 46.0569, lng: 14.5058 },
-    "Croatia": { lat: 45.8150, lng: 15.9819 },
-    "Albania": { lat: 41.3275, lng: 19.8187 },
-    "Montenegro": { lat: 42.4304, lng: 19.2594 },
-    "North Macedonia": { lat: 41.9981, lng: 21.4254 },
-    "Qatar": { lat: 25.2854, lng: 51.5310 },
-    "Bahrain": { lat: 26.0667, lng: 50.5577 },
-    "Kuwait": { lat: 29.3759, lng: 47.9774 },
-    "United Arab Emirates": { lat: 24.4539, lng: 54.3773 },
-    "Saudi Arabia": { lat: 24.7136, lng: 46.6753 },
-    "Djibouti": { lat: 11.5721, lng: 43.1456 },
-    "Australia": { lat: -25.2744, lng: 133.7751 },
-    "Singapore": { lat: 1.3521, lng: 103.8198 },
-    "Philippines": { lat: 14.5995, lng: 120.9842 },
-    "Guam": { lat: 13.4443, lng: 144.7937 },
-    "Diego Garcia": { lat: -7.3195, lng: 72.4229 },
-    "Honduras": { lat: 14.0723, lng: -87.1921 },
-    "Cuba": { lat: 19.9030, lng: -75.0997 },
-    "Kosovo": { lat: 42.6026, lng: 20.9030 },
-    "Iraq": { lat: 33.3152, lng: 44.3661 },
-    "Syria": { lat: 35.2433, lng: 38.9637 },
-    "Afghanistan": { lat: 34.5553, lng: 69.2075 },
-    "Iceland": { lat: 64.1466, lng: -21.9426 },
-    "Greenland": { lat: 76.5310, lng: -68.7030 },
+  const cityCoordinates: Record<string, { lat: number; lng: number; country: string }> = {
+    // Kerala, India - historical Nipah outbreak locations
+    "Kozhikode": { lat: 11.2588, lng: 75.7804, country: "India" },
+    "Malappuram": { lat: 11.0510, lng: 76.0711, country: "India" },
+    "Ernakulam": { lat: 9.9816, lng: 76.2999, country: "India" },
+    "Kannur": { lat: 11.8745, lng: 75.3704, country: "India" },
+    "Thrissur": { lat: 10.5276, lng: 76.2144, country: "India" },
+    "Kochi": { lat: 9.9312, lng: 76.2673, country: "India" },
+
+    // Bangladesh - Nipah outbreak locations
+    "Dhaka": { lat: 23.8103, lng: 90.4125, country: "Bangladesh" },
+    "Rajbari": { lat: 23.7574, lng: 89.6444, country: "Bangladesh" },
+    "Faridpur": { lat: 23.6070, lng: 89.8429, country: "Bangladesh" },
+    "Naogaon": { lat: 24.7936, lng: 88.9318, country: "Bangladesh" },
+    "Tangail": { lat: 24.2513, lng: 89.9167, country: "Bangladesh" },
+    "Manikganj": { lat: 23.8617, lng: 90.0003, country: "Bangladesh" },
+    "Rajshahi": { lat: 24.3745, lng: 88.6042, country: "Bangladesh" },
+
+    // Other potential locations
+    "Singapore": { lat: 1.3521, lng: 103.8198, country: "Singapore" },
+    "Siliguri": { lat: 26.7271, lng: 88.3953, country: "India" },
+    "Silchar": { lat: 24.8333, lng: 92.7789, country: "India" },
+    "Guwahati": { lat: 26.1445, lng: 91.7362, country: "India" },
   };
 
   for (const line of lines) {
     const parts = line.split("|").map((p) => p.trim());
-    if (parts.length >= 2) {
+    if (parts.length >= 3) {
       const countryName = parts[0].replace(/^[-*•\d.)\s]+/, "").trim();
-      const baseName = parts[1] || "Military Base";
-      const typeStr = (parts[2] || "").toLowerCase();
-      const type: "usa" | "nato" = typeStr.includes("nato") ? "nato" : "usa";
+      const cityName = parts[1] || "Unknown";
+      const hospitalName = parts[2] || "Medical Facility";
+      const statusStr = (parts[3] || "monitoring").toLowerCase();
 
-      const coords = countryCoordinates[countryName];
+      let status: "active" | "contained" | "monitoring" = "monitoring";
+      if (statusStr.includes("active")) status = "active";
+      else if (statusStr.includes("contained") || statusStr.includes("resolved")) status = "contained";
+
+      const coords = cityCoordinates[cityName];
       if (coords) {
-        bases.push({
+        hospitals.push({
           country: countryName,
-          baseName,
+          city: cityName,
+          hospitalName,
           latitude: coords.lat,
           longitude: coords.lng,
-          type,
+          status,
         });
       }
     }
   }
 
-  if (bases.length < 5) {
+  // Fallback data with known Nipah outbreak hospitals
+  if (hospitals.length < 3) {
     return [
-      { country: "Germany", baseName: "Ramstein Air Base", latitude: 49.4369, longitude: 7.6003, type: "usa" },
-      { country: "Japan", baseName: "Yokota Air Base", latitude: 35.7485, longitude: 139.3487, type: "usa" },
-      { country: "South Korea", baseName: "Camp Humphreys", latitude: 36.9631, longitude: 127.0311, type: "usa" },
-      { country: "Italy", baseName: "Aviano Air Base", latitude: 46.0319, longitude: 12.5965, type: "nato" },
-      { country: "United Kingdom", baseName: "RAF Lakenheath", latitude: 52.4093, longitude: 0.5610, type: "usa" },
-      { country: "Turkey", baseName: "Incirlik Air Base", latitude: 37.0017, longitude: 35.4259, type: "nato" },
-      { country: "Spain", baseName: "Rota Naval Station", latitude: 36.6453, longitude: -6.3497, type: "usa" },
-      { country: "Poland", baseName: "Redzikowo", latitude: 54.4791, longitude: 17.0975, type: "nato" },
-      { country: "Romania", baseName: "Mihail Kogălniceanu", latitude: 44.3622, longitude: 28.4883, type: "nato" },
-      { country: "Greece", baseName: "Souda Bay", latitude: 35.5317, longitude: 24.1217, type: "nato" },
-      { country: "Qatar", baseName: "Al Udeid Air Base", latitude: 25.1173, longitude: 51.3150, type: "usa" },
-      { country: "Bahrain", baseName: "NSA Bahrain", latitude: 26.2361, longitude: 50.6508, type: "usa" },
-      { country: "Kuwait", baseName: "Camp Arifjan", latitude: 28.9347, longitude: 48.0917, type: "usa" },
-      { country: "United Arab Emirates", baseName: "Al Dhafra Air Base", latitude: 24.2481, longitude: 54.5467, type: "usa" },
-      { country: "Djibouti", baseName: "Camp Lemonnier", latitude: 11.5469, longitude: 43.1556, type: "usa" },
-      { country: "Australia", baseName: "Pine Gap", latitude: -23.7990, longitude: 133.7370, type: "usa" },
-      { country: "Singapore", baseName: "Sembawang", latitude: 1.4419, longitude: 103.8200, type: "usa" },
-      { country: "Guam", baseName: "Andersen Air Force Base", latitude: 13.5839, longitude: 144.9244, type: "usa" },
-      { country: "Diego Garcia", baseName: "Naval Support Facility", latitude: -7.3133, longitude: 72.4111, type: "usa" },
-      { country: "Cuba", baseName: "Guantanamo Bay", latitude: 19.9025, longitude: -75.0969, type: "usa" },
-      { country: "Kosovo", baseName: "Camp Bondsteel", latitude: 42.3600, longitude: 21.2500, type: "nato" },
-      { country: "Belgium", baseName: "NATO HQ Brussels", latitude: 50.8770, longitude: 4.4260, type: "nato" },
-      { country: "Netherlands", baseName: "Brunssum", latitude: 50.9469, longitude: 5.9772, type: "nato" },
-      { country: "Norway", baseName: "Rygge Air Station", latitude: 59.3783, longitude: 10.7850, type: "nato" },
-      { country: "Estonia", baseName: "Ämari Air Base", latitude: 59.2603, longitude: 24.2086, type: "nato" },
-      { country: "Latvia", baseName: "Lielvārde Air Base", latitude: 56.7761, longitude: 24.8536, type: "nato" },
-      { country: "Lithuania", baseName: "Šiauliai Air Base", latitude: 55.8939, longitude: 23.3950, type: "nato" },
-      { country: "Iceland", baseName: "Keflavik", latitude: 63.9850, longitude: -22.6056, type: "nato" },
-      { country: "Greenland", baseName: "Thule Air Base", latitude: 76.5312, longitude: -68.7031, type: "usa" },
-      { country: "Honduras", baseName: "Soto Cano Air Base", latitude: 14.3822, longitude: -87.6211, type: "usa" },
-      { country: "Philippines", baseName: "Clark Air Base", latitude: 15.1858, longitude: 120.5600, type: "usa" },
-      { country: "Bulgaria", baseName: "Novo Selo", latitude: 42.0167, longitude: 26.1333, type: "nato" },
+      { country: "India", city: "Kozhikode", hospitalName: "Government Medical College Kozhikode", latitude: 11.2588, longitude: 75.7804, status: "monitoring", caseCount: 15, lastReported: "2023" },
+      { country: "India", city: "Ernakulam", hospitalName: "Ernakulam Medical Centre", latitude: 9.9816, longitude: 76.2999, status: "contained", caseCount: 3, lastReported: "2021" },
+      { country: "Bangladesh", city: "Dhaka", hospitalName: "Dhaka Medical College Hospital", latitude: 23.7261, longitude: 90.3967, status: "monitoring", caseCount: 8, lastReported: "2023" },
+      { country: "Bangladesh", city: "Faridpur", hospitalName: "Faridpur Medical College", latitude: 23.6070, longitude: 89.8429, status: "contained", caseCount: 4, lastReported: "2022" },
+      { country: "India", city: "Malappuram", hospitalName: "District Hospital Malappuram", latitude: 11.0510, longitude: 76.0711, status: "monitoring", caseCount: 2, lastReported: "2023" },
+      { country: "Bangladesh", city: "Rajbari", hospitalName: "Rajbari District Hospital", latitude: 23.7574, longitude: 89.6444, status: "contained", caseCount: 5, lastReported: "2021" },
+      { country: "India", city: "Kannur", hospitalName: "Government General Hospital Kannur", latitude: 11.8745, longitude: 75.3704, status: "monitoring", caseCount: 1, lastReported: "2022" },
+      { country: "Bangladesh", city: "Naogaon", hospitalName: "Naogaon Sadar Hospital", latitude: 24.7936, longitude: 88.9318, status: "contained", caseCount: 3, lastReported: "2020" },
     ];
   }
 
-  return bases;
+  return hospitals;
 }
 
-export async function getCountryConflicts(
+export async function getCountryNipahCases(
   country: string,
   options?: EntityOptions
-): Promise<{ past: ConflictResult; current: ConflictResult }> {
+): Promise<{ past: HospitalCaseInfo; current: HospitalCaseInfo }> {
   const valyu = getValyuClient();
 
   type AnswerResponse = {
@@ -599,13 +560,13 @@ export async function getCountryConflicts(
 
   const [pastResponse, currentResponse] = await Promise.all([
     valyu.answer(
-      `List all major historical wars, conflicts, and military engagements that ${country} has been involved in throughout history (excluding any ongoing conflicts). Include the dates, opposing parties, and brief outcomes for each conflict. Focus on conflicts that have ended.`,
+      `List all historical Nipah virus outbreaks and cases in ${country} from 1998 to 2023. Include the year, location, number of cases, deaths, and hospitals involved. Focus on past outbreaks that have been resolved.`,
       {
         excludedSources: ["wikipedia.org"],
       }
     ),
     valyu.answer(
-      `List all current, ongoing, or brewing conflicts, wars, military tensions, and security threats involving ${country} as of 2024-2026. Include active military operations, border disputes, civil unrest, terrorism threats, and geopolitical tensions. If there are no current conflicts, state that clearly.`,
+      `List all current or recent Nipah virus cases, outbreaks, and monitoring activities in ${country} as of 2024-2026. Include active cases, hospitals treating patients, containment measures, and surveillance programs. If there are no current cases, state that clearly.`,
       {
         excludedSources: ["wikipedia.org"],
       }
@@ -617,14 +578,14 @@ export async function getCountryConflicts(
 
   return {
     past: {
-      answer: pastData.contents || "No historical conflict information found.",
+      summary: pastData.contents || "No historical Nipah virus case information found.",
       sources: (pastData.search_results || []).map((s) => ({
         title: s.title || "Source",
         url: s.url || "",
       })),
     },
     current: {
-      answer: currentData.contents || "No current conflict information found.",
+      summary: currentData.contents || "No current Nipah virus case information found.",
       sources: (currentData.search_results || []).map((s) => ({
         title: s.title || "Source",
         url: s.url || "",
@@ -633,21 +594,21 @@ export async function getCountryConflicts(
   };
 }
 
-export type ConflictStreamChunk = {
+export type NipahCaseStreamChunk = {
   type: "current_content" | "current_sources" | "past_content" | "past_sources" | "done" | "error";
   content?: string;
   sources?: Array<{ title: string; url: string }>;
   error?: string;
 };
 
-export async function* streamCountryConflicts(
+export async function* streamCountryNipahCases(
   country: string
-): AsyncGenerator<ConflictStreamChunk> {
+): AsyncGenerator<NipahCaseStreamChunk> {
   const valyu = getValyuClient();
 
-  const currentQuery = `List all current, ongoing, or brewing conflicts, wars, military tensions, and security threats involving ${country} as of 2024-2026. Include active military operations, border disputes, civil unrest, terrorism threats, and geopolitical tensions. If there are no current conflicts, state that clearly.`;
+  const currentQuery = `List all current or recent Nipah virus cases, outbreaks, and monitoring activities in ${country} as of 2024-2026. Include active cases, hospitals treating patients, containment measures, and surveillance programs. If there are no current cases, state that clearly.`;
 
-  const pastQuery = `List all major historical wars, conflicts, and military engagements that ${country} has been involved in throughout history (excluding any ongoing conflicts). Include the dates, opposing parties, and brief outcomes for each conflict. Focus on conflicts that have ended.`;
+  const pastQuery = `List all historical Nipah virus outbreaks and cases in ${country} from 1998 to 2023. Include the year, location, number of cases, deaths, and hospitals involved. Focus on past outbreaks that have been resolved.`;
 
   try {
     const currentStream = await valyu.answer(currentQuery, {

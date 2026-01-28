@@ -9,13 +9,13 @@ import type { ThreatEvent } from "@/types";
 export const dynamic = "force-dynamic";
 
 const THREAT_QUERIES = [
-  "breaking news conflict military",
-  "geopolitical crisis tensions",
-  "protest demonstration unrest",
-  "natural disaster emergency",
-  "terrorism attack security",
-  "cyber attack breach",
-  "diplomatic summit sanctions",
+  "Nipah virus outbreak",
+  "Nipah virus cases",
+  "Nipah virus news",
+  "Nipah virus deaths",
+  "Nipah henipavirus",
+  "Nipah virus Kerala",
+  "Nipah virus Bangladesh",
 ];
 
 // Clean boilerplate from content

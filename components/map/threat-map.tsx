@@ -152,75 +152,36 @@ const entityLocationLabelLayer: LayerProps = {
   },
 };
 
-const militaryBaseLayer: LayerProps = {
-  id: "military-bases",
-  type: "symbol",
-  layout: {
-    "icon-image": [
-      "match",
-      ["get", "type"],
-      "usa", "us-national-park-11",
-      "nato", "us-national-park-11",
-      "us-national-park-11",
-    ],
-    "icon-size": 1.5,
-    "icon-allow-overlap": true,
-    "text-field": ["get", "baseName"],
-    "text-font": ["DIN Pro Medium", "Arial Unicode MS Bold"],
-    "text-size": 10,
-    "text-offset": [0, 1.5],
-    "text-anchor": "top",
-    "text-optional": true,
-  },
-  paint: {
-    "icon-color": [
-      "match",
-      ["get", "type"],
-      "usa", "#22c55e",
-      "nato", "#3b82f6",
-      "#22c55e",
-    ],
-    "text-color": [
-      "match",
-      ["get", "type"],
-      "usa", "#22c55e",
-      "nato", "#3b82f6",
-      "#22c55e",
-    ],
-    "text-halo-color": "#1e293b",
-    "text-halo-width": 1,
-  },
-};
-
-// Fallback circle layer for military bases (in case icons don't load)
-const militaryBaseCircleLayer: LayerProps = {
-  id: "military-bases-circle",
+const hospitalCircleLayer: LayerProps = {
+  id: "hospitals-circle",
   type: "circle",
   paint: {
     "circle-color": [
       "match",
-      ["get", "type"],
-      "usa", "#22c55e",
-      "nato", "#3b82f6",
-      "#22c55e",
+      ["get", "status"],
+      "active", "#ef4444",
+      "contained", "#eab308",
+      "monitoring", "#3b82f6",
+      "#3b82f6",
     ],
     "circle-radius": 8,
     "circle-stroke-width": 3,
     "circle-stroke-color": [
       "match",
-      ["get", "type"],
-      "usa", "#166534",
-      "nato", "#1e40af",
-      "#166534",
+      ["get", "status"],
+      "active", "#991b1b",
+      "contained", "#854d0e",
+      "monitoring", "#1e40af",
+      "#1e40af",
     ],
   },
 };
 
-const militaryBaseLabelLayer: LayerProps = {
-  id: "military-bases-labels",
+const hospitalLabelLayer: LayerProps = {
+  id: "hospitals-labels",
   type: "symbol",
   layout: {
-    "text-field": ["get", "baseName"],
+    "text-field": ["get", "hospitalName"],
     "text-font": ["DIN Pro Medium", "Arial Unicode MS Bold"],
     "text-size": 10,
     "text-offset": [0, 1.2],
@@ -229,10 +190,11 @@ const militaryBaseLabelLayer: LayerProps = {
   paint: {
     "text-color": [
       "match",
-      ["get", "type"],
-      "usa", "#22c55e",
-      "nato", "#3b82f6",
-      "#22c55e",
+      ["get", "status"],
+      "active", "#ef4444",
+      "contained", "#eab308",
+      "monitoring", "#3b82f6",
+      "#3b82f6",
     ],
     "text-halo-color": "#1e293b",
     "text-halo-width": 1,
@@ -258,12 +220,15 @@ interface SelectedEntityLocation {
   country?: string;
 }
 
-interface SelectedMilitaryBase {
+interface SelectedHospital {
   longitude: number;
   latitude: number;
-  baseName: string;
+  hospitalName: string;
+  city: string;
   country: string;
-  type: "usa" | "nato";
+  status: "active" | "contained" | "monitoring";
+  caseCount?: number;
+  lastReported?: string;
 }
 
 export function ThreatMap() {
@@ -274,15 +239,15 @@ export function ThreatMap() {
     showHeatmap,
     showClusters,
     entityLocations,
-    showMilitaryBases,
-    militaryBases,
-    setMilitaryBases,
-    setMilitaryBasesLoading,
+    showHospitals,
+    hospitals,
+    setHospitals,
+    setHospitalsLoading,
   } = useMapStore();
   const { filteredEvents, selectedEvent, selectEvent } = useEventsStore();
   const { isAuthenticated, initialized } = useAuthStore();
   const [selectedEntityLocation, setSelectedEntityLocation] = useState<SelectedEntityLocation | null>(null);
-  const [selectedMilitaryBase, setSelectedMilitaryBase] = useState<SelectedMilitaryBase | null>(null);
+  const [selectedHospital, setSelectedHospital] = useState<SelectedHospital | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
   const [isCountryLoading, setIsCountryLoading] = useState(false);
@@ -298,25 +263,25 @@ export function ThreatMap() {
     return hasReachedLimit();
   }, [requiresAuth, isAuthenticated, initialized]);
 
-  // Fetch military bases on mount
+  // Fetch Nipah hospitals on mount
   useEffect(() => {
-    const fetchMilitaryBases = async () => {
-      setMilitaryBasesLoading(true);
+    const fetchHospitals = async () => {
+      setHospitalsLoading(true);
       try {
         const response = await fetch("/api/military-bases");
         const data = await response.json();
-        if (data.bases) {
-          setMilitaryBases(data.bases);
+        if (data.hospitals) {
+          setHospitals(data.hospitals);
         }
       } catch (error) {
-        console.error("Error fetching military bases:", error);
+        console.error("Error fetching Nipah hospitals:", error);
       } finally {
-        setMilitaryBasesLoading(false);
+        setHospitalsLoading(false);
       }
     };
 
-    fetchMilitaryBases();
-  }, [setMilitaryBases, setMilitaryBasesLoading]);
+    fetchHospitals();
+  }, [setHospitals, setHospitalsLoading]);
 
   // Blinking effect for selected country while loading
   useEffect(() => {
@@ -384,24 +349,27 @@ export function ThreatMap() {
     [entityLocations]
   );
 
-  const militaryBasesData = useMemo(
+  const hospitalsData = useMemo(
     () => ({
       type: "FeatureCollection" as const,
-      features: militaryBases.map((base, index) => ({
+      features: hospitals.map((hospital, index) => ({
         type: "Feature" as const,
         properties: {
-          id: `military-base-${index}`,
-          baseName: base.baseName,
-          country: base.country,
-          type: base.type,
+          id: `hospital-${index}`,
+          hospitalName: hospital.hospitalName,
+          city: hospital.city,
+          country: hospital.country,
+          status: hospital.status,
+          caseCount: hospital.caseCount,
+          lastReported: hospital.lastReported,
         },
         geometry: {
           type: "Point" as const,
-          coordinates: [base.longitude, base.latitude],
+          coordinates: [hospital.longitude, hospital.latitude],
         },
       })),
     }),
-    [militaryBases]
+    [hospitals]
   );
 
   const handleMapClick = useCallback(
@@ -434,7 +402,7 @@ export function ThreatMap() {
           if (clickedEvent) {
             selectEvent(clickedEvent);
             setSelectedEntityLocation(null);
-            setSelectedMilitaryBase(null);
+            setSelectedHospital(null);
           }
           return;
         } else if (layerId === "entity-locations") {
@@ -447,16 +415,19 @@ export function ThreatMap() {
             country: feature.properties?.country,
           });
           selectEvent(null);
-          setSelectedMilitaryBase(null);
+          setSelectedHospital(null);
           return;
-        } else if (layerId === "military-bases-circle") {
+        } else if (layerId === "hospitals-circle") {
           const coords = (feature.geometry as GeoJSON.Point).coordinates;
-          setSelectedMilitaryBase({
+          setSelectedHospital({
             longitude: coords[0],
             latitude: coords[1],
-            baseName: feature.properties?.baseName || "Military Base",
+            hospitalName: feature.properties?.hospitalName || "Hospital",
+            city: feature.properties?.city || "Unknown",
             country: feature.properties?.country || "Unknown",
-            type: feature.properties?.type || "usa",
+            status: feature.properties?.status || "monitoring",
+            caseCount: feature.properties?.caseCount,
+            lastReported: feature.properties?.lastReported,
           });
           selectEvent(null);
           setSelectedEntityLocation(null);
@@ -467,7 +438,7 @@ export function ThreatMap() {
       // If no feature was clicked, reverse geocode to get country
       selectEvent(null);
       setSelectedEntityLocation(null);
-      setSelectedMilitaryBase(null);
+      setSelectedHospital(null);
 
       const { lng, lat } = event.lngLat;
 
@@ -539,8 +510,8 @@ export function ThreatMap() {
       mapboxAccessToken={MAPBOX_TOKEN}
       interactiveLayerIds={
         showClusters
-          ? ["clusters", "unclustered-point", "entity-locations", "military-bases-circle"]
-          : ["unclustered-point", "entity-locations", "military-bases-circle"]
+          ? ["clusters", "unclustered-point", "entity-locations", "hospitals-circle"]
+          : ["unclustered-point", "entity-locations", "hospitals-circle"]
       }
       onClick={handleMapClick}
       onMouseEnter={handleMouseEnter}
@@ -617,11 +588,11 @@ export function ThreatMap() {
         </Source>
       )}
 
-      {/* Military Bases Layer */}
-      {showMilitaryBases && militaryBases.length > 0 && (
-        <Source id="military-bases" type="geojson" data={militaryBasesData}>
-          <Layer {...militaryBaseCircleLayer} />
-          <Layer {...militaryBaseLabelLayer} />
+      {/* Nipah Hospitals Layer */}
+      {showHospitals && hospitals.length > 0 && (
+        <Source id="hospitals" type="geojson" data={hospitalsData}>
+          <Layer {...hospitalCircleLayer} />
+          <Layer {...hospitalLabelLayer} />
         </Source>
       )}
 
@@ -720,29 +691,33 @@ export function ThreatMap() {
         </Popup>
       )}
 
-      {selectedMilitaryBase && (
+      {selectedHospital && (
         <Popup
-          longitude={selectedMilitaryBase.longitude}
-          latitude={selectedMilitaryBase.latitude}
+          longitude={selectedHospital.longitude}
+          latitude={selectedHospital.latitude}
           anchor="bottom"
-          onClose={() => setSelectedMilitaryBase(null)}
+          onClose={() => setSelectedHospital(null)}
           closeButton={true}
           closeOnClick={false}
           className="threat-popup"
         >
-          <div className="min-w-[220px] p-2">
+          <div className="min-w-[240px] p-2">
             <div className="mb-2 flex items-center gap-2">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                  selectedMilitaryBase.type === "usa"
-                    ? "bg-green-500/20"
+                  selectedHospital.status === "active"
+                    ? "bg-red-500/20"
+                    : selectedHospital.status === "contained"
+                    ? "bg-yellow-500/20"
                     : "bg-blue-500/20"
                 }`}
               >
                 <svg
                   className={`h-4 w-4 ${
-                    selectedMilitaryBase.type === "usa"
-                      ? "text-green-400"
+                    selectedHospital.status === "active"
+                      ? "text-red-400"
+                      : selectedHospital.status === "contained"
+                      ? "text-yellow-400"
                       : "text-blue-400"
                   }`}
                   fill="none"
@@ -753,22 +728,28 @@ export function ThreatMap() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                   />
                 </svg>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">
-                  {selectedMilitaryBase.baseName}
+                  {selectedHospital.hospitalName}
                 </h3>
                 <span
                   className={`text-xs ${
-                    selectedMilitaryBase.type === "usa"
-                      ? "text-green-400"
+                    selectedHospital.status === "active"
+                      ? "text-red-400"
+                      : selectedHospital.status === "contained"
+                      ? "text-yellow-400"
                       : "text-blue-400"
                   }`}
                 >
-                  {selectedMilitaryBase.type === "usa" ? "US Military Base" : "NATO Base"}
+                  {selectedHospital.status === "active"
+                    ? "Active Cases"
+                    : selectedHospital.status === "contained"
+                    ? "Contained"
+                    : "Monitoring"}
                 </span>
               </div>
             </div>
@@ -784,11 +765,53 @@ export function ThreatMap() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <span>{selectedMilitaryBase.country}</span>
+                <span>{selectedHospital.city}, {selectedHospital.country}</span>
               </div>
+              {selectedHospital.caseCount !== undefined && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <svg
+                    className="h-3 w-3 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  <span>{selectedHospital.caseCount} reported case{selectedHospital.caseCount !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {selectedHospital.lastReported && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <svg
+                    className="h-3 w-3 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span>Last reported: {selectedHospital.lastReported}</span>
+                </div>
+              )}
             </div>
           </div>
         </Popup>

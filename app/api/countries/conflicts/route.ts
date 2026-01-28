@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCountryConflicts, streamCountryConflicts } from "@/lib/valyu";
+import { getCountryNipahCases, streamCountryNipahCases } from "@/lib/valyu";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of streamCountryConflicts(country)) {
+          for await (const chunk of streamCountryNipahCases(country)) {
             const data = `data: ${JSON.stringify(chunk)}\n\n`;
             controller.enqueue(encoder.encode(data));
           }
@@ -49,24 +49,24 @@ export async function GET(request: Request) {
 
   // Non-streaming mode - return full response
   try {
-    const result = await getCountryConflicts(country);
+    const result = await getCountryNipahCases(country);
 
     return NextResponse.json({
       country,
       past: {
-        conflicts: result.past.answer,
+        cases: result.past.summary,
         sources: result.past.sources,
       },
       current: {
-        conflicts: result.current.answer,
+        cases: result.current.summary,
         sources: result.current.sources,
       },
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error fetching country conflicts:", error);
+    console.error("Error fetching country Nipah cases:", error);
     return NextResponse.json(
-      { error: "Failed to fetch country conflicts" },
+      { error: "Failed to fetch country Nipah cases" },
       { status: 500 }
     );
   }

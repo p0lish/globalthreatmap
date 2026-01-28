@@ -16,16 +16,11 @@ const THREAT_LEVELS: ThreatLevel[] = [
 ];
 
 const CATEGORIES: EventCategory[] = [
-  "conflict",
-  "protest",
-  "disaster",
-  "diplomatic",
-  "economic",
-  "terrorism",
-  "cyber",
-  "health",
-  "environmental",
-  "military",
+  "outbreak",
+  "case",
+  "news",
+  "research",
+  "prevention",
 ];
 
 export function FeedFilters() {

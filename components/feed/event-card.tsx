@@ -9,29 +9,19 @@ import { useMapStore } from "@/stores/map-store";
 import {
   MapPin,
   Clock,
-  Swords,
-  Users,
-  CloudLightning,
-  Landmark,
-  TrendingDown,
   AlertTriangle,
+  Activity,
+  Newspaper,
+  BookOpen,
   Shield,
-  Heart,
-  Leaf,
-  Target,
 } from "lucide-react";
 
 const categoryIconMap = {
-  conflict: Swords,
-  protest: Users,
-  disaster: CloudLightning,
-  diplomatic: Landmark,
-  economic: TrendingDown,
-  terrorism: AlertTriangle,
-  cyber: Shield,
-  health: Heart,
-  environmental: Leaf,
-  military: Target,
+  outbreak: AlertTriangle,
+  case: Activity,
+  news: Newspaper,
+  research: BookOpen,
+  prevention: Shield,
 };
 
 interface EventCardProps {

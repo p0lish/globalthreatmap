@@ -13,25 +13,20 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-nano";
 
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
-// Zod schema for structured event classification
+// Zod schema for Nipah virus event classification
 const EventClassificationSchema = z.object({
   category: z.enum([
-    "conflict",
-    "protest",
-    "disaster",
-    "diplomatic",
-    "economic",
-    "terrorism",
-    "cyber",
-    "health",
-    "environmental",
-    "military",
-  ]).describe("The primary category of the event"),
+    "outbreak",
+    "case",
+    "news",
+    "research",
+    "prevention",
+  ]).describe("The type of Nipah virus event: outbreak (active outbreak), case (individual/cluster cases), news (general Nipah virus news), research (studies/findings), prevention (health measures/vaccination)"),
   threatLevel: z.enum(["critical", "high", "medium", "low", "info"]).describe(
-    "Severity level: critical (imminent danger, mass casualties), high (significant threat), medium (developing situation), low (minor/contained), info (routine update)"
+    "Severity level: critical (major outbreak, high mortality), high (confirmed cases spreading), medium (isolated cases, monitoring), low (contained/resolved), info (research updates, prevention info)"
   ),
   primaryLocation: z.string().describe(
-    "The main geographic location (city, region, or country) where the event is occurring. Use proper names."
+    "The main geographic location (city, region, or country) where the Nipah virus event is occurring. Use proper names."
   ),
   country: z.string().optional().describe(
     "The country where the event is occurring, if identifiable"
@@ -47,7 +42,7 @@ export interface ClassificationResult {
 }
 
 /**
- * Classify an event using OpenAI structured outputs
+ * Classify a Nipah virus event using OpenAI structured outputs
  * Extracts category, threat level, and location in a single API call
  */
 async function classifyWithAI(
@@ -62,18 +57,23 @@ async function classifyWithAI(
       messages: [
         {
           role: "system",
-          content: `You are an intelligence analyst classifying global events. Analyze the headline and content to determine:
-1. Category - the type of event (conflict, protest, disaster, etc.)
-2. Threat Level - severity based on potential impact and urgency
-3. Location - the primary geographic location where this is happening
+          content: `You are a health intelligence analyst specializing in Nipah virus tracking. Analyze the headline and content to determine:
+1. Category - the type of Nipah virus event:
+   - outbreak: active Nipah virus outbreaks affecting multiple people
+   - case: individual or cluster case reports of Nipah virus
+   - news: general news coverage about Nipah virus
+   - research: scientific studies, findings, or research on Nipah virus
+   - prevention: prevention measures, vaccination efforts, health advisories
+2. Threat Level - severity based on outbreak scale and mortality risk
+3. Location - the primary geographic location where this event is happening
 
 Be precise with locations - use actual place names (cities, countries, regions).
 For threat level:
-- critical: imminent danger, mass casualties, nuclear/WMD threats
-- high: significant active threats, major incidents, escalating situations
-- medium: developing situations, moderate concern, ongoing tensions
-- low: minor incidents, contained events, localized issues
-- info: routine updates, announcements, analysis pieces`,
+- critical: major outbreak with high mortality, rapid spread, multiple deaths
+- high: confirmed Nipah cases with active transmission, deaths reported
+- medium: isolated cases under monitoring, limited transmission
+- low: contained or resolved cases, no active spread
+- info: research updates, prevention information, historical context`,
         },
         {
           role: "user",
@@ -98,7 +98,7 @@ For threat level:
 }
 
 /**
- * Classify an event - uses AI if available, falls back to keyword matching
+ * Classify a Nipah virus event - uses AI if available, falls back to keyword matching
  * Returns category, threat level, and geocoded location
  */
 export async function classifyEvent(

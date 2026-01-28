@@ -8,7 +8,6 @@ import { ThreatMap } from "@/components/map/threat-map";
 import { TimelineScrubber } from "@/components/map/timeline-scrubber";
 import { WelcomeModal } from "@/components/welcome-modal";
 import { SignInPanel, SignInModal } from "@/components/auth";
-import { PolymarketTicker, POLYMARKET_TICKER_HEIGHT } from "@/components/polymarket-ticker";
 
 const WELCOME_DISMISSED_KEY = "globalthreatmap_welcome_dismissed";
 
@@ -34,7 +33,7 @@ export default function Home() {
   }, [requiresSignIn]);
 
   return (
-    <div className="flex h-screen flex-col" style={{ paddingBottom: POLYMARKET_TICKER_HEIGHT }}>
+    <div className="flex h-screen flex-col" style={{ paddingBottom: 0 }}>
       <Header
         onRefresh={refresh}
         isLoading={isLoading}
@@ -50,7 +49,6 @@ export default function Home() {
       <WelcomeModal open={showWelcome} onOpenChange={setShowWelcome} />
       <SignInPanel />
       <SignInModal open={showSignInModal} onOpenChange={setShowSignInModal} />
-      <PolymarketTicker category="Politics" />
     </div>
   );
 }
