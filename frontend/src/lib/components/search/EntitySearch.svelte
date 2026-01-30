@@ -470,7 +470,7 @@
 						<div
 							class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20"
 						>
-							<TypeIco class="h-5 w-5 text-primary" />
+							<TypeIcon class="h-5 w-5 text-primary" />
 						</div>
 						<div class="flex-1">
 							<CardTitle class="text-lg">{entity.name}</CardTitle>

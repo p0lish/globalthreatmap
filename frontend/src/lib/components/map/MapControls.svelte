@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { showHeatmap, showClusters, showWatchboxes, projection, toggleHeatmap, toggleClusters, toggleWatchboxes, toggleProjection } from '$lib/stores/map';
+	import { showHeatmap, showClusters, showWatchboxes, projection, globeRotating, toggleHeatmap, toggleClusters, toggleWatchboxes, toggleProjection, toggleGlobeRotation } from '$lib/stores/map';
 	import { Button } from '$lib/components/ui';
 	import { cn } from '$lib/utils/cn';
 	import Flame from 'lucide-svelte/icons/flame';
@@ -7,6 +7,7 @@
 	import Square from 'lucide-svelte/icons/square';
 	import Globe from 'lucide-svelte/icons/globe';
 	import Map from 'lucide-svelte/icons/map';
+	import RotateCw from 'lucide-svelte/icons/rotate-cw';
 </script>
 
 <div class="absolute bottom-4 left-4 z-10 flex flex-col gap-2">
@@ -24,6 +25,17 @@
 				<Globe class="h-4 w-4" />
 			{/if}
 		</Button>
+		{#if $projection === 'globe'}
+			<Button
+				variant="ghost"
+				size="icon"
+				onclick={toggleGlobeRotation}
+				class={cn('h-8 w-8', $globeRotating && 'bg-primary/20 text-primary animate-spin-slow')}
+				title={$globeRotating ? 'Stop Rotation' : 'Start Globe Rotation'}
+			>
+				<RotateCw class="h-4 w-4" />
+			</Button>
+		{/if}
 		<Button
 			variant="ghost"
 			size="icon"

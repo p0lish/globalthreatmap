@@ -30,6 +30,8 @@ export type MapProjection = 'mercator' | 'globe';
 // Base stores
 export const viewport = writable<MapViewport>(DEFAULT_VIEWPORT);
 export const projection = writable<MapProjection>('mercator');
+export const globeRotating = writable(false);
+export const sidebarCollapsed = writable(false);
 export const showHeatmap = writable(false);
 export const showClusters = writable(true);
 export const showWatchboxes = writable(true);
@@ -77,6 +79,22 @@ export function toggleProjection() {
 
 export function setProjection(newProjection: MapProjection) {
 	projection.set(newProjection);
+}
+
+export function toggleSidebar() {
+	sidebarCollapsed.update((current) => !current);
+}
+
+export function toggleGlobeRotation() {
+	globeRotating.update((current) => !current);
+}
+
+export function setGlobeRotating(rotating: boolean) {
+	globeRotating.set(rotating);
+}
+
+export function setSidebarCollapsed(collapsed: boolean) {
+	sidebarCollapsed.set(collapsed);
 }
 
 export function startDrawingWatchbox() {

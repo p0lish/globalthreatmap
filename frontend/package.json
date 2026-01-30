@@ -9,7 +9,8 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"db:setup": "node --experimental-strip-types scripts/db-setup.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.0",
@@ -24,6 +25,8 @@
 		"vite": "^7.3.1"
 	},
 	"dependencies": {
+		"@anthropic-ai/sdk": "^0.72.1",
+		"better-sqlite3": "^11.8.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lucide-svelte": "^0.563.0",
@@ -33,5 +36,8 @@
 		"tailwind-merge": "^3.4.0",
 		"valyu-js": "^2.5.2",
 		"zod": "^3.23.8"
+	},
+	"optionalDependencies": {
+		"@types/better-sqlite3": "^7.6.12"
 	}
 }

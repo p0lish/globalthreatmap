@@ -3,6 +3,7 @@
 	import { Button } from "$lib/components/ui";
 	import EventFeed from "$lib/components/feed/EventFeed.svelte";
 	import EntitySearch from "$lib/components/search/EntitySearch.svelte";
+	import { sidebarCollapsed, toggleSidebar } from "$lib/stores/map";
 	import Activity from "lucide-svelte/icons/activity";
 	import FileText from "lucide-svelte/icons/file-text";
 	import ChevronLeft from "lucide-svelte/icons/chevron-left";
@@ -12,7 +13,6 @@
 	type Tab = "feed" | "search";
 
 	let activeTab = $state<Tab>("feed");
-	let isCollapsed = $state(false);
 	const tabs = [
 		{ id: "feed" as Tab, label: "Live Feed", icon: Activity },
 		{ id: "search" as Tab, label: "Intel", icon: FileText },
@@ -22,23 +22,23 @@
 <div
 	class={cn(
 		"relative flex h-full flex-col border-l border-border bg-card transition-all duration-300",
-		isCollapsed ? "w-12" : "w-96",
+		$sidebarCollapsed ? "w-12" : "w-96",
 	)}
 >
 	<Button
 		variant="ghost"
 		size="icon"
 		class="absolute -left-3 top-4 z-10 h-6 w-6 rounded-full border border-border bg-card"
-		onclick={() => (isCollapsed = !isCollapsed)}
+		onclick={toggleSidebar}
 	>
-		{#if isCollapsed}
+		{#if $sidebarCollapsed}
 			<ChevronLeft class="h-3 w-3" />
 		{:else}
 			<ChevronRight class="h-3 w-3" />
 		{/if}
 	</Button>
 
-	{#if !isCollapsed}
+	{#if !$sidebarCollapsed}
 		<div class="flex border-b border-border">
 			{#each tabs as tab}
 				<button
@@ -65,7 +65,7 @@
 		</div>
 	{/if}
 
-	{#if isCollapsed}
+	{#if $sidebarCollapsed}
 		<div class="flex flex-col items-center gap-2 pt-12">
 			{#each tabs as tab}
 				<Button
@@ -73,7 +73,7 @@
 					size="icon"
 					onclick={() => {
 						activeTab = tab.id;
-						isCollapsed = false;
+						sidebarCollapsed.set(false);
 					}}
 					class={cn(
 						"h-8 w-8",
